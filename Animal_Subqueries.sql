@@ -125,3 +125,93 @@ FROM	Animals AS An
 		ON	An.Species = Ad.Species
 			AND 
 			An.Name = Ad.Name;
+
+
+
+USE Animal_Shelter;
+
+
+-- Show adopters who adopted 2 animals in 1 day
+SELECT	A1.Adopter_email, A1.Adoption_date,
+		A1.name AS Name1, A2.Name AS Name2, 
+		A1.species AS Species1, A2.Species AS Species2
+FROM	Adoptions AS A1
+		INNER JOIN 
+		Adoptions AS A2
+		ON	A1.adopter_email = A2.adopter_email
+			AND
+			A1.adoption_date = A2.adoption_date
+			AND (
+				(A1.Name = A2.Name AND A1.Species > A2.Species)
+				OR 
+				(A1.Name > A2.Name AND A1.Species = A2.Species)
+				OR 
+				(A1.Name > A2.Name AND A1.Species <> A2.Species)
+				)
+ORDER BY A1.adopter_email, A1.adoption_date;
+
+
+
+-- The Top End Per Group Challenge
+-- Show animals with their most recent vaccination
+
+SELECT	A.Name, A.Species, A.Primary_Color, A.Breed, 
+		(	SELECT	Vaccine
+			FROM	Vaccinations AS V
+			WHERE	V.Name = A.Name
+					AND 
+					V.Species = A.Species
+			ORDER BY V.Vaccination_Time DESC
+			OFFSET 0 ROWS FETCH NEXT 1 ROW ONLY
+		) AS Last_Vaccine
+FROM	Animals AS A;
+
+
+
+--Alternative approach to this using a LATERAL JOIN (CROSS APPLY in Server)
+SELECT	A.Name, A.Species, A.Primary_color, A.Breed, 
+		Last_Vaccination.*
+FROM	Animals A
+		CROSS APPLY -- OUTER APPLY will return the NULL vaccinations
+		(	SELECT V.Vaccine, V.Vaccination_Time
+			FROM	Vaccinations AS V
+			WHERE	V.Name = A.Name 
+					AND 
+					V.Species = A.Species
+			ORDER BY V.Vaccination_Time DESC
+			OFFSET 0 ROWS FETCH NEXT 3 ROWS ONLY
+		) AS Last_Vaccination;
+
+
+
+
+
+
+-- Find Purebred candidates of the same species and breed
+-- breed is not null
+-- MY SOLUTION
+SELECT	A1.Species, A1.Breed, A1.Name AS Male, A2.Name AS Female
+FROM	Animals AS A1
+		INNER JOIN 
+		Animals AS A2
+		ON	A1.species = A2.species
+			AND 
+			A1.breed = A2.breed
+WHERE	A1.Gender = 'M' -- No need to as the IS NOT NULL because of the equality of a1.breed = a2.breed 
+		AND 
+		A2.Gender = 'F'
+ORDER BY A1.Species, A1.Breed
+;
+
+--COURSE SOLUTION 1
+SELECT	A1.Species, A1.Breed, A1.Name AS Male, A2.Name AS Female
+FROM	Animals AS A1
+		INNER JOIN 
+		Animals AS A2
+		ON	A1.species = A2.species
+			AND 
+			A1.breed = A2.breed
+			AND 
+			A1.Gender > A2.Gender
+ORDER BY A1.Species, A1.Breed
+;
